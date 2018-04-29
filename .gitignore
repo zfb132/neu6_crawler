@@ -1,5 +1,7 @@
 config.py
+*.pickle
 *.status
+cache/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
