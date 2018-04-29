@@ -1,16 +1,32 @@
 # neu6_crawler
-6维 统计爆楼帖
+6维 爆楼帖统计
 
 本项目基于[EasyLogin](https://github.com/zjuchenyuan/EasyLogin)
 
 目前可以爬取帖子每一页，进行分析
 
-代码文件结构：
-- login.py 登录逻辑 基类NEU6
-- gettopic.py 爬取帖子
-- analysis_topic.py 对爬取得到的数据进行分析
+## 运行方法
 
-类、函数说明：
+```
+# 依赖库安装
+pip3 install -U requests[socks] bs4 -i https://pypi.doubanio.com/simple/ --trusted-host pypi.doubanio.com
+# 复制本项目
+git clone https://github.com/zjuchenyuan/neu6_crawler
+# 将用户名username密码password写入config.py
+vim config.py
+# 执行爬取 也许你想修改爬取目标 自己改代码吧
+./gettopic.py
+# 输出分析结果
+./analysis_topic.py
+```
+
+## 代码文件结构
+
+- login.py 登录逻辑 基类NEU6
+- gettopic.py 爬取帖子 生成data.pickle
+- analysis_topic.py 读取data.pickle 对爬取得到的数据进行分析
+
+### 类、函数说明：
 
 ```
 login.py
