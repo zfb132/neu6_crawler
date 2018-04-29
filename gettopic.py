@@ -63,22 +63,22 @@ if __name__=="__main__":
         posts = pickle.load(open("data.pickle","rb"))
         for i in range(1, int(posts[-1][1])+1):
             try:
-                assert i==int(posts[i-1][1])
+                assert i==int(posts[i-1][1]) # 检查缓存正确性 如果遗漏了楼层退出
             except:
                 print(i,post[i-1])
                 exit()
         lastfloor = int(posts[-1][1])
         lastpage = lastfloor//10
-        pages = x.thread_pages(threadid)
+        pages = x.thread_pages(threadid) # 不使用缓存获取当前有多少页
         i = lastpage+1
-        usecache = False
+        usecache = False # 最后一页不使用缓存
         while i<=pages:
             title, _pages, page_posts = x.thread_page(threadid, i, usecache=usecache)
-            usecache= True
+            usecache= True # 后续页面继续允许缓存
             try:
                 assert int(posts[-1][1])+1 == int(page_posts[0][1])
             except:
-                posts = posts[:int(page_posts[0][1])-1]
+                posts = posts[:int(page_posts[0][1])-1] # 删掉旧数据的最后几楼
                 assert int(posts[-1][1])+1 == int(page_posts[0][1])
             posts.extend(page_posts)
             if i%10==0:
@@ -86,4 +86,4 @@ if __name__=="__main__":
             i += 1
         open("data.pickle","wb").write(pickle.dumps(posts))
     else:
-        x.thread_page(threadid, 193)
+        pass
