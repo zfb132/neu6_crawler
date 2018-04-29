@@ -4,7 +4,7 @@ import time
 myprint = lambda s: print("[{showtime}] {s}".format(showtime=time.strftime("%Y-%m-%d %H:%M:%S"), s=s))
 
 class NEU6():
-    def __init__(self, username, password):
+    def __init__(self, username, password, login=True):
         self.ENDPOINT = "http://bt.neu6.edu.cn"
         self.username = username
         self.password = password
@@ -12,7 +12,7 @@ class NEU6():
             self.a = EasyLogin._import("neu6_"+username+".status")
         except:
             self.a = EasyLogin()
-        if not self.islogin():
+        if login and not self.islogin():
             self.login()
             self.a.export("neu6_"+username+".status")
     
