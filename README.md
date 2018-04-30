@@ -13,7 +13,7 @@ pip3 install -U requests[socks] bs4 -i https://pypi.doubanio.com/simple/ --trust
 # 复制本项目
 git clone https://github.com/zjuchenyuan/neu6_crawler
 mkdir -p cache
-# 将用户名username密码password写入config.py
+# 将用户名username密码password要爬的帖子threadid写入config.py
 vim config.py
 # 执行爬取 也许你想修改爬取目标 自己改代码吧
 python3 gettopic.py
@@ -24,8 +24,8 @@ python3 analysis_topic.py
 ## 代码文件结构
 
 - login.py 登录逻辑 基类NEU6
-- gettopic.py 爬取帖子 生成data.pickle
-- analysis_topic.py 读取data.pickle 对爬取得到的数据进行分析
+- gettopic.py 爬取帖子 生成data_帖子id.pickle
+- analysis_topic.py 读取pickle文件 对爬取得到的数据进行分析: 回复数Top20用户，被引用Top10，自引用、神游、多次引用违规，最长引用链
 
 ### 类、函数说明：
 

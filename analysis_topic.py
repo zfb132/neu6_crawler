@@ -6,7 +6,15 @@ from collections import OrderedDict
 import sys
 import json
 import time
-data=pickle.load(open("data.pickle","rb"))
+from config import threadid
+datafilename = "data_{threadid}.pickle".format(**locals())
+data=pickle.load(open(datafilename,"rb"))
+
+try:
+    from config import config_top
+except:
+    config_top = 20
+
 postid2post = {}
 username2post = {}
 replied = {}
@@ -130,26 +138,37 @@ def trenddata(userposts):
         result.append([elasped_hours, tmp])
     return result
 
-def print_quote_link(floor):
+floor_handled = {}
+def print_quote_link(floor, t):
     post = data[int(floor)-1]
     floor = str(floor)
+    if floor_handled.get(floor, False) == True:
+        return False#如果这条链是之前链的子链 跳过
+    floor_handled[floor] = True
     result = [floor]
     while post[6]!="-1":
         post = postid2post[post[6]]
+        if floor_handled.get(post[1], False):
+            continue
         result.append(post[1])
-    print("\n".join([floor2url(i)+" "+"%-10s"%data[int(i)-1][2]+"\t"+data[int(i)-1][4] for i in result]))
+        floor_handled[post[1]] = True
+    if len(result)>30:
+        print("第%d条链(长度%d)："%(t, len(result))+"\n".join([floor2url(i)+" "+"%-10s"%data[int(i)-1][2]+"\t"+data[int(i)-1][4].replace("\n","").replace("\r","") for i in result])+"\n----\n")
+        return True
+    else:
+        return False
 
 if len(sys.argv)==1:
     print("\n[发帖时间统计] 小时 回复数量")
     for hour, count in posttime_count.items():
         print(hour+"点"+"\t"+str(count))
 
-    print("\n[用户Top50]\n[table]")
+    print("\n[用户Top{config_top}]\n[table]".format(config_top=config_top))
     print("[tr][td]"+"[/td][td]".join(["排名","用户名","回帖次数","爬楼率(引用的引用不是自己的比率)","提醒处理率(别人回复了我 我接着回复别人)","神游次数(不引用直接回复, 大于1则违规)","多次引用违规","回复平均字数","楼层"])+"[/td][/tr]")
     sortbypostcount = sort_by_len(username2post)
     t = 1
     trendjson = []
-    for username, user_posts in sortbypostcount[:50]:
+    for username, user_posts in sortbypostcount[:config_top]:
         #print_name_len_example(username, user_posts, lambda i:postid2post[i][1])
         name = username
         list = user_posts
@@ -206,10 +225,11 @@ if len(sys.argv)==1:
                 .replace("{{titletext}}","统计截至 "+maxfloor+" 楼 "+maxposttime)
     )
     
-    print("\n[最长引用链]")
+    print("\n[最长引用链] 按完整链长度排序，但只显示每条链独有部分 长度大于30才列出")
+    t = 1
     for floor, depth in sort_reverse(quote_depth):
-        print_quote_link(floor)
-        break
+        if print_quote_link(floor, t):
+            t += 1
     print()
 
 else:

@@ -56,21 +56,28 @@ class NEU6_TOPIC(NEU6):
         return self.thread_page(threadid, pageid=1, extraid=1, usecache=False)[1]
 
 if __name__=="__main__":
-    from config import username, password
+    from config import username, password, threadid
     import pickle
-    posts = []
-    threadid = 1623494
+    
+    #threadid = 1623494 #change from reading config.py
+    datafilename = "data_{threadid}.pickle".format(**locals())
     x=NEU6_TOPIC(username, password, login=False)
     if 1:
-        posts = pickle.load(open("data.pickle","rb"))
-        for i in range(1, int(posts[-1][1])+1):
-            try:
-                assert i==int(posts[i-1][1]) # 检查缓存正确性 如果遗漏了楼层退出
-            except:
-                print(i,post[i-1])
-                exit()
-        lastfloor = int(posts[-1][1])
-        lastpage = lastfloor//10
+        try:
+            posts = pickle.load(open(datafilename,"rb"))
+        except:
+            posts = []
+        if len(posts):
+            for i in range(1, int(posts[-1][1])+1):
+                try:
+                    assert i==int(posts[i-1][1]) # 检查缓存正确性 如果遗漏了楼层退出
+                except:
+                    print(i,post[i-1])
+                    exit()
+            lastfloor = int(posts[-1][1])
+            lastpage = lastfloor//10
+        else:
+            lastpage = 0
         pages = x.thread_pages(threadid) # 不使用缓存获取当前有多少页
         i = lastpage+1
         usecache = False # 最后一页不使用缓存
@@ -80,14 +87,15 @@ if __name__=="__main__":
                 pages = _pages
             usecache= True # 后续页面继续允许缓存
             try:
-                assert int(posts[-1][1])+1 == int(page_posts[0][1])
+                if len(posts):
+                    assert int(posts[-1][1])+1 == int(page_posts[0][1])
             except:
                 posts = posts[:int(page_posts[0][1])-1] # 删掉旧数据的最后几楼
                 assert int(posts[-1][1])+1 == int(page_posts[0][1])
             posts.extend(page_posts)
             if i%10==0:
-                open("data.pickle","wb").write(pickle.dumps(posts))
+                open(datafilename,"wb").write(pickle.dumps(posts))
             i += 1
-        open("data.pickle","wb").write(pickle.dumps(posts))
+        open(datafilename,"wb").write(pickle.dumps(posts))
     else:
         pass
