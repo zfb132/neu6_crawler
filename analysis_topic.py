@@ -18,6 +18,7 @@ ziyin_count = {}
 user_replieusers = {}
 palou_count = {}
 user_yinyong = {}
+quote_depth = {} #引用链深度 如5引用3引用1，则为{1:0, 3:1, 5:2}
 
 def dict_add_list(dictname, key, value):
     if key not in dictname:
@@ -61,8 +62,10 @@ for post in data: #遍历一遍所有的回帖
         if username not in user_yinyong:
             user_yinyong[username] = {}
         dict_add_list(user_yinyong[username], postid2post[replytarget][1], floor)
+        dict_incr(quote_depth, int(floor), 1+quote_depth[int(postid2post[replytarget][1])])
     else:
         dict_add_list(user_shenyou, username, floor) #没有引用直接回复 加入神游
+        dict_incr(quote_depth, int(floor), 0)
     posthour = posttime.split(":")[0] #提取日期、小时
     dict_incr(posttime_count, posthour) #时间统计
     
@@ -127,43 +130,26 @@ def trenddata(userposts):
         result.append([elasped_hours, tmp])
     return result
 
-if len(sys.argv)==1:
-    print("\n[神游Top10] 用户名 神游次数 楼层")
-    for username, shenyou_floors in sort_by_len(user_shenyou)[:10]:
-        print_name_len_example(username, shenyou_floors)
+def print_quote_link(floor):
+    post = data[int(floor)-1]
+    floor = str(floor)
+    result = [floor]
+    while post[6]!="-1":
+        post = postid2post[post[6]]
+        result.append(post[1])
+    print("\n".join([floor2url(i)+" "+"%-10s"%data[int(i)-1][2]+"\t"+data[int(i)-1][4] for i in result]))
 
+if len(sys.argv)==1:
     print("\n[发帖时间统计] 小时 回复数量")
     for hour, count in posttime_count.items():
         print(hour+"点"+"\t"+str(count))
 
-    print("\n[被引用Top10] 被引楼层 被引数 引用它的楼层")
-    for reply_target, replys in sort_by_len(replied)[:10]:
-        print_name_len_example(postid2post[reply_target][1], replys, lambda i:postid2post[i][1], end=1)
-
-    print("\n[自引用违规] 用户名 自引数量")
-    for username, count in sort_reverse(ziyin_count):
-        print(username+": "+str(count), end="; ")
-    print()
-
-    print("\n[回复覆盖率Top10] 用户名 ta回复的用户数 (用户数总数%d)"%len(username2post))
-    for username, reply_users in sort_by_len(user_replieusers)[:10]:
-        print_name_len_example(username, sorted(reply_users), start=0)
-
-    #print("\n[爬楼计数] 用户名 爬楼数量")
-    #for username, count in sort_reverse(palou_count):
-    #    print("%-10s"%username+"\t"+"%.1f%%"%(count*100))
-
-    print("\n[多次引用违规]\n[table][tr][td]用户名[/td][td]违规次数[/td][td]违规相应楼层[/td][/tr]")
-    for username, count in sort_reverse(yinyong_weigui_count):
-        print("[tr][td]"+"[/td][td]".join([username,str(count),",".join([floor2url(i) for i in yinyong_weigui[username]])])+"[/td][/tr]")
-    print("[/table]")
-
-    print("\n[用户Top20]\n[table]")
+    print("\n[用户Top50]\n[table]")
     print("[tr][td]"+"[/td][td]".join(["排名","用户名","回帖次数","爬楼率(引用的引用不是自己的比率)","提醒处理率(别人回复了我 我接着回复别人)","神游次数(不引用直接回复, 大于1则违规)","多次引用违规","回复平均字数","楼层"])+"[/td][/tr]")
     sortbypostcount = sort_by_len(username2post)
     t = 1
     trendjson = []
-    for username, user_posts in sortbypostcount[:20]:
+    for username, user_posts in sortbypostcount[:50]:
         #print_name_len_example(username, user_posts, lambda i:postid2post[i][1])
         name = username
         list = user_posts
@@ -184,13 +170,47 @@ if len(sys.argv)==1:
         if t<=10:
             trendjson.append({"name":username, "data": trenddata(user_posts), "type":"line", "showAllSymbol":True})
         t+=1
+    print("[tr][td]"+"[/td][td]".join(["排名","用户名","回帖次数","爬楼率(引用的引用不是自己的比率)","提醒处理率(别人回复了我 我接着回复别人)","神游次数(不引用直接回复, 大于1则违规)","多次引用违规","回复平均字数","楼层"])+"[/td][/tr]")
+    print("[/table]\n")
+
+    print("\n[被引用Top10] 被引楼层 被引数 引用它的楼层")
+    for reply_target, replys in sort_by_len(replied)[:10]:
+        print_name_len_example(postid2post[reply_target][1], replys, lambda i:postid2post[i][1], end=1)
+
+    print("\n[自引用违规] 用户名 自引数量")
+    for username, count in sort_reverse(ziyin_count):
+        print(username+": "+str(count), end="; ")
+    print()
+
+    print("\n[神游违规Top10] 用户名 神游次数 楼层")
+    for username, shenyou_floors in sort_by_len(user_shenyou)[:10]:
+        print_name_len_example(username, shenyou_floors)
+
+    print("\n[回复覆盖率Top10] 用户名 ta回复的用户数 (用户数总数%d)"%len(username2post))
+    for username, reply_users in sort_by_len(user_replieusers)[:10]:
+        print_name_len_example(username, sorted(reply_users), start=0)
+
+    #print("\n[爬楼计数] 用户名 爬楼数量")
+    #for username, count in sort_reverse(palou_count):
+    #    print("%-10s"%username+"\t"+"%.1f%%"%(count*100))
+
+    print("\n[多次引用违规]\n[table][tr][td]用户名[/td][td]违规次数[/td][td]违规相应楼层[/td][/tr]")
+    for username, count in sort_reverse(yinyong_weigui_count):
+        print("[tr][td]"+"[/td][td]".join([username,str(count),",".join([floor2url(i) for i in yinyong_weigui[username]])])+"[/td][/tr]")
+    print("[/table]")
+
     template = open("trend.template.html","r", encoding="utf-8").read()
     open("trend.html", "w", encoding="utf-8").write(
         template.replace("{{trendjson}}",json.dumps(trendjson))\
                 .replace("{{starttime}}",str(starttime))\
                 .replace("{{titletext}}","统计截至 "+maxfloor+" 楼 "+maxposttime)
     )
-    print("[/table]\n")
+    
+    print("\n[最长引用链]")
+    for floor, depth in sort_reverse(quote_depth):
+        print_quote_link(floor)
+        break
+    print()
 
 else:
     username = sys.argv[1]
