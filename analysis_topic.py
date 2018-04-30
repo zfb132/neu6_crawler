@@ -1,6 +1,8 @@
 import pickle
 from collections import OrderedDict
 import sys
+import json
+import time
 data=pickle.load(open("data.pickle","rb"))
 postid2post = {}
 username2post = {}
@@ -94,6 +96,21 @@ def floor2url(floor): #输入楼层输出对应的url
     pid = floor2id(floor)
     return "[url=/forum.php?mod=viewthread&tid=1623494&page={pageid}#pid{pid}]{floor}[/url]".format(**locals())
 
+starttime = 1524974400
+def trenddata(userposts):
+    result = [[0,0]]
+    tmp = 0
+    for postid in userposts:
+        tmp += 1
+        if tmp %3 != 0 and postid!=userposts[-1]:
+            continue
+        posttime = postid2post[postid][5]
+        timestamp = int(time.mktime(time.strptime(posttime, "%Y-%m-%d %H:%M")))
+        elasped_seconds = timestamp-starttime
+        elasped_hours = elasped_seconds/3600
+        result.append([elasped_hours, tmp])
+    return result
+
 if len(sys.argv)==1:
     print("\n[神游Top10] 用户名 神游次数 楼层")
     for username, shenyou_floors in sort_by_len(user_shenyou)[:10]:
@@ -129,6 +146,7 @@ if len(sys.argv)==1:
     print("[tr][td]"+"[/td][td]".join(["排名","用户名","回帖次数","爬楼率(引用的引用不是自己的比率)","神游次数(不引用直接回复, 大于1则违规)","多次引用违规","回复平均字数","楼层"])+"[/td][/tr]")
     sortbypostcount = sort_by_len(username2post)
     t = 1
+    trendjson = []
     for username, user_posts in sortbypostcount[:20]:
         #print_name_len_example(username, user_posts, lambda i:postid2post[i][1])
         name = username
@@ -146,7 +164,15 @@ if len(sys.argv)==1:
               "%.0f"%(sum([len(postid2post[i][4]) for i in username2post[username]])/len(username2post[username]))+splitchar+\
               (",".join([func(i) for i in list[:start]])+",...,"+",".join([func(i) for i in list[-end:]]) if start>0 else "")+\
               "[/td][/tr]")
+        if t<=10:
+            trendjson.append({"name":username, "data": trenddata(user_posts), "type":"line", "showAllSymbol":True})
         t+=1
+    template = open("trend.template.html","r", encoding="utf-8").read()
+    open("trend.html", "w", encoding="utf-8").write(
+        template.replace("{{trendjson}}",json.dumps(trendjson))\
+                .replace("{{starttime}}",str(starttime))\
+                .replace("{{titletext}}","统计截至 "+maxfloor+" 楼 "+maxposttime)
+    )
     print("[/table]\n")
 
 else:
