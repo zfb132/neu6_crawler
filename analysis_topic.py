@@ -10,6 +10,7 @@ posttime_count = OrderedDict()
 ziyin_count = {}
 user_replieusers = {}
 palou_count = {}
+user_yinyong = {}
 
 def dict_add_list(dictname, key, value):
     if key not in dictname:
@@ -23,11 +24,17 @@ def dict_add_set(dictname, key, value):
     else:
         dictname[key].add(value)
 
-def dict_incr(dictname, key):
+def dict_incr(dictname, key, value=1):
     if key not in dictname:
-        dictname[key] = 1
+        dictname[key] = value
     else:
-        dictname[key] += 1
+        dictname[key] += value
+
+def dict_extend(dictname, key, value):
+    if key not in dictname:
+        dictname[key] = value
+    else:
+        dictname[key].extend(value)
 
 id2username = lambda id:postid2post[id][2]
 
@@ -42,6 +49,9 @@ for post in data: #遍历一遍所有的回帖
             dict_incr(palou_count, username) #爬楼计数 引用的引用不是自己
         dict_add_list(replied, replytarget, postid) #被引用楼层replied加入此楼id
         dict_add_set(user_replieusers, username, postid2post[replytarget][2]) #用户引用覆盖的用户加入set
+        if username not in user_yinyong:
+            user_yinyong[username] = {}
+        dict_add_list(user_yinyong[username], postid2post[replytarget][1], floor)
     else:
         dict_add_list(user_shenyou, username, floor) #没有引用直接回复 加入神游
     posthour = posttime.split(":")[0] #提取日期、小时
@@ -52,6 +62,15 @@ maxposttime = posttime
 
 for username in palou_count:
     palou_count[username] = palou_count[username]/(len(username2post[username])-len(user_shenyou.get(username, [])))
+
+yinyong_weigui = {}
+yinyong_weigui_count = {}
+for username, floordict in user_yinyong.items():
+    for floor, quotefloors in floordict.items():
+        count = len(quotefloors)
+        if count>1:
+            dict_extend(yinyong_weigui, username, quotefloors)
+            dict_incr(yinyong_weigui_count, username, count-1)
 
 print("统计截至 "+maxfloor+" 楼 "+maxposttime)
 
@@ -101,8 +120,13 @@ if len(sys.argv)==1:
     #for username, count in sort_reverse(palou_count):
     #    print("%-10s"%username+"\t"+"%.1f%%"%(count*100))
 
+    print("\n[多次引用违规]\n[table][tr][td]用户名[/td][td]违规次数[/td][td]违规相应楼层[/td][/tr]")
+    for username, count in sort_reverse(yinyong_weigui_count):
+        print("[tr][td]"+"[/td][td]".join([username,str(count),",".join([floor2url(i) for i in yinyong_weigui[username]])])+"[/td][/tr]")
+    print("[/table]")
+
     print("\n[用户Top20]\n[table]")
-    print("[tr][td]"+"[/td][td]".join(["排名","用户名","回帖次数","爬楼率(引用的引用不是自己的比率)","神游次数(不引用直接回复, 大于1则违规)","回复平均字数","楼层"])+"[/td][/tr]")
+    print("[tr][td]"+"[/td][td]".join(["排名","用户名","回帖次数","爬楼率(引用的引用不是自己的比率)","神游次数(不引用直接回复, 大于1则违规)","多次引用违规","回复平均字数","楼层"])+"[/td][/tr]")
     sortbypostcount = sort_by_len(username2post)
     t = 1
     for username, user_posts in sortbypostcount[:20]:
@@ -113,13 +137,22 @@ if len(sys.argv)==1:
         start = 5
         end = 3
         splitchar = "[/td][td]"
-        print("[tr][td]"+str(t)+splitchar+name+splitchar+str(len(list))+splitchar+"%2.1f%%"%(palou_count.get(username, 0)*100)+splitchar+str(len(user_shenyou.get(username,[])))+splitchar+"%.0f"%(sum([len(postid2post[i][4]) for i in username2post[username]])/len(username2post[username]))+splitchar+(",".join([func(i) for i in list[:start]])+",...,"+",".join([func(i) for i in list[-end:]]) if start>0 else "")+"[/td][/tr]")
+        print("[tr][td]"+str(t)+splitchar+\
+              name+splitchar+\
+              str(len(list))+splitchar+\
+              "%2.1f%%"%(palou_count.get(username, 0)*100)+splitchar+\
+              str(len(user_shenyou.get(username,[])))+splitchar+\
+              str(yinyong_weigui_count.get(username,0))+splitchar+\
+              "%.0f"%(sum([len(postid2post[i][4]) for i in username2post[username]])/len(username2post[username]))+splitchar+\
+              (",".join([func(i) for i in list[:start]])+",...,"+",".join([func(i) for i in list[-end:]]) if start>0 else "")+\
+              "[/td][/tr]")
         t+=1
     print("[/table]\n")
+
 else:
     username = sys.argv[1]
     print("神游楼层：")
-    for floor in user_shenyou[username]:
+    for floor in user_shenyou.get(username,[]):
         print(floor2url(floor), end=",")
     print()
     
@@ -127,5 +160,7 @@ else:
     for postid in username2post[username]:
         postid, floor, username, contenthtml, content, posttime, replytarget = postid2post[postid]
         print(floor, content)
+    
+    print("回复数量：",len(username2post[username]))
 
 print("统计截至 "+maxfloor+" 楼 "+maxposttime)

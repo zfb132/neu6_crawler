@@ -45,7 +45,7 @@ class NEU6_TOPIC(NEU6):
             else:
                 floor = floordiv.find("em").text.strip()
             posttime = div.find("em", {"id":"authorposton"+postid}).text.replace("发表于 ","")
-            print(floor,username,content,posttime,replytarget)
+            print(floor,"%-10s"%username+"\t",content,posttime,replytarget)
             #print(floor)
             posts.append([postid, floor, username, contenthtml, content, posttime, replytarget])
         return [title, pages, posts]
