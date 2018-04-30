@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+# encoding: utf-8
+from __future__ import print_function
 import pickle
 from collections import OrderedDict
 import sys

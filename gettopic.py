@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+# encoding: utf-8
 from login import NEU6
 import re
 
