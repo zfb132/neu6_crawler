@@ -74,6 +74,8 @@ if __name__=="__main__":
         usecache = False # 最后一页不使用缓存
         while i<=pages:
             title, _pages, page_posts = x.thread_page(threadid, i, usecache=usecache)
+            if _pages > pages:
+                pages = _pages
             usecache= True # 后续页面继续允许缓存
             try:
                 assert int(posts[-1][1])+1 == int(page_posts[0][1])
