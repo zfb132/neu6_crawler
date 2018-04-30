@@ -10,6 +10,8 @@ data=pickle.load(open("data.pickle","rb"))
 postid2post = {}
 username2post = {}
 replied = {}
+user_notice = {} #用户收到的提醒列表 floor
+user_replied_to = {}
 user_shenyou = {}
 posttime_count = OrderedDict()
 ziyin_count = {}
@@ -53,6 +55,8 @@ for post in data: #遍历一遍所有的回帖
         if postid2post[replytarget][6]!="-1" and id2username(postid2post[replytarget][6])!=username:
             dict_incr(palou_count, username) #爬楼计数 引用的引用不是自己
         dict_add_list(replied, replytarget, postid) #被引用楼层replied加入此楼id
+        dict_add_list(user_notice, postid2post[replytarget][2], floor) #写入被引用用户的通知
+        dict_add_list(user_replied_to, username, postid2post[replytarget][1]) #写入回复关系
         dict_add_set(user_replieusers, username, postid2post[replytarget][2]) #用户引用覆盖的用户加入set
         if username not in user_yinyong:
             user_yinyong[username] = {}
@@ -76,6 +80,15 @@ for username, floordict in user_yinyong.items():
         if count>1:
             dict_extend(yinyong_weigui, username, quotefloors)
             dict_incr(yinyong_weigui_count, username, count-1)
+
+notice_reply_ratio = {}
+for username, floors in user_notice.items():
+    fenzi = 0
+    fenmu = len(floors)
+    for floor in floors:
+        if floor in user_replied_to.get(username,[]):
+            fenzi += 1
+    notice_reply_ratio[username] = fenzi/fenmu
 
 print("统计截至 "+maxfloor+" 楼 "+maxposttime)
 
@@ -146,7 +159,7 @@ if len(sys.argv)==1:
     print("[/table]")
 
     print("\n[用户Top20]\n[table]")
-    print("[tr][td]"+"[/td][td]".join(["排名","用户名","回帖次数","爬楼率(引用的引用不是自己的比率)","神游次数(不引用直接回复, 大于1则违规)","多次引用违规","回复平均字数","楼层"])+"[/td][/tr]")
+    print("[tr][td]"+"[/td][td]".join(["排名","用户名","回帖次数","爬楼率(引用的引用不是自己的比率)","提醒处理率(别人回复了我 我接着回复别人)","神游次数(不引用直接回复, 大于1则违规)","多次引用违规","回复平均字数","楼层"])+"[/td][/tr]")
     sortbypostcount = sort_by_len(username2post)
     t = 1
     trendjson = []
@@ -162,6 +175,7 @@ if len(sys.argv)==1:
               name+splitchar+\
               str(len(list))+splitchar+\
               "%2.1f%%"%(palou_count.get(username, 0)*100)+splitchar+\
+              "%2.1f%%"%(notice_reply_ratio.get(username, 0)*100)+splitchar+\
               str(len(user_shenyou.get(username,[])))+splitchar+\
               str(yinyong_weigui_count.get(username,0))+splitchar+\
               "%.0f"%(sum([len(postid2post[i][4]) for i in username2post[username]])/len(username2post[username]))+splitchar+\
