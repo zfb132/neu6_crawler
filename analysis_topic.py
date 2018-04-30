@@ -168,8 +168,8 @@ if len(sys.argv)==1:
         name = username
         list = user_posts
         func = lambda i:floor2url(postid2post[i][1])
-        start = 5
-        end = 3
+        start = 1
+        end = 1
         splitchar = "[/td][td]"
         print("[tr][td]"+str(t)+splitchar+\
               name+splitchar+\
@@ -194,16 +194,25 @@ if len(sys.argv)==1:
 
 else:
     username = sys.argv[1]
-    print("神游楼层：")
-    for floor in user_shenyou.get(username,[]):
-        print(floor2url(floor), end=",")
-    print()
-    
+
     print("所有回复：")
     for postid in username2post[username]:
         postid, floor, username, contenthtml, content, posttime, replytarget = postid2post[postid]
         print(floor, content)
     
-    print("回复数量：",len(username2post[username]))
+    print("\n回复数量：",len(username2post[username]))
+    
+    print("爬楼率：%2.1f%%"%(palou_count.get(username, 0)*100))
+    
+    print("提醒处理率: %2.1f%%"%(notice_reply_ratio.get(username, 0)*100))
+    
+    print("神游次数 %d 楼层："%len(user_shenyou.get(username,[])))
+    for floor in user_shenyou.get(username,[]):
+        print(floor2url(floor), end=",")
+    print()
+    
+    print("多次引用违规次数 %d 楼层："%yinyong_weigui_count.get(username,0))
+    print(",".join([floor2url(i) for i in yinyong_weigui.get(username,[])]))
 
-print("统计截至 "+maxfloor+" 楼 "+maxposttime)
+
+print("\n统计截至 "+maxfloor+" 楼 "+maxposttime)
