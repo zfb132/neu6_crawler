@@ -62,6 +62,15 @@ def print_name_len_example(name, list, func=None, start=5, end=3):
         func = lambda i:i
     print("%-10s"%name+"\t"+str(len(list))+"\t"+(",".join([func(i) for i in list[:start]])+",...,"+",".join([func(i) for i in list[-end:]]) if start>0 else ""))
 
+def floor2id(floor):
+    return data[floor-1][0]
+
+def floor2url(floor):
+    floor = int(floor)
+    pageid = (floor+9)//10
+    pid = floor2id(floor)
+    return "[url=http://bt.neu6.edu.cn/forum.php?mod=viewthread&tid=1623494&page={pageid}#pid{pid}]{floor}[/url]".format(**locals())
+
 print("\n[神游Top10] 用户名 神游次数 楼层")
 for username, shenyou_floors in sort_by_len(user_shenyou)[:10]:
     print_name_len_example(username, shenyou_floors)
@@ -87,17 +96,18 @@ for username, reply_users in sort_by_len(user_replieusers)[:10]:
 #for username, count in sort_reverse(palou_count):
 #    print("%-10s"%username+"\t"+"%.1f%%"%(count*100))
 
-print("\n[用户Top20]\n[table]\n用户名|回帖次数|爬楼率|神游次数|楼层")
+print("\n[用户Top20]\n[table]")
+print("[tr][td]"+"[/td][td]".join(["用户名","回帖次数","爬楼率","神游次数","回复平均字数","楼层"])+"[/td][/tr]")
 sortbypostcount = sort_by_len(username2post)
 for username, user_posts in sortbypostcount[:20]:
     #print_name_len_example(username, user_posts, lambda i:postid2post[i][1])
     name = username
     list = user_posts
-    func = lambda i:postid2post[i][1]
+    func = lambda i:floor2url(postid2post[i][1])
     start = 5
     end = 3
-    splitchar = "|"
-    print(name+splitchar+str(len(list))+splitchar+"%2.1f%%"%(palou_count.get(username, 0)*100)+splitchar+str(len(user_shenyou.get(username,[])))+splitchar+(",".join([func(i) for i in list[:start]])+",...,"+",".join([func(i) for i in list[-end:]]) if start>0 else ""))
+    splitchar = "[/td][td]"
+    print("[tr][td]"+name+splitchar+str(len(list))+splitchar+"%2.1f%%"%(palou_count.get(username, 0)*100)+splitchar+str(len(user_shenyou.get(username,[])))+splitchar+"%.0f"%(sum([len(postid2post[i][4]) for i in username2post[username]])/len(username2post[username]))+splitchar+(",".join([func(i) for i in list[:start]])+",...,"+",".join([func(i) for i in list[-end:]]) if start>0 else "")+"[/td][/tr]")
 print("[/table]\n")
 
 print("统计截至 "+floor+" 楼 "+posttime)
