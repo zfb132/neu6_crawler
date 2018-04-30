@@ -3,7 +3,7 @@
 
 本项目基于[EasyLogin](https://github.com/zjuchenyuan/EasyLogin)
 
-目前可以爬取帖子每一页，进行分析
+目前可以爬取帖子每一页，进行分析，并输出回复前10名趋势图
 
 ## 运行方法
 
@@ -12,12 +12,13 @@
 pip3 install -U requests[socks] bs4 -i https://pypi.doubanio.com/simple/ --trusted-host pypi.doubanio.com
 # 复制本项目
 git clone https://github.com/zjuchenyuan/neu6_crawler
+mkdir -p cache
 # 将用户名username密码password写入config.py
 vim config.py
 # 执行爬取 也许你想修改爬取目标 自己改代码吧
-./gettopic.py
+python3 gettopic.py
 # 输出分析结果
-./analysis_topic.py
+python3 analysis_topic.py
 ```
 
 ## 代码文件结构
