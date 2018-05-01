@@ -15,6 +15,8 @@ git clone https://github.com/zjuchenyuan/neu6_crawler
 mkdir -p cache
 # 将用户名username密码password要爬的帖子threadid写入config.py
 vim config.py
+# 如果是首次使用，则需要先登录
+python3 login.py
 # 执行爬取 也许你想修改爬取目标 自己改代码吧
 python3 gettopic.py
 # 输出分析结果
