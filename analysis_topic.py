@@ -15,6 +15,11 @@ try:
 except:
     config_top = 20
 
+try:
+    from config import after_analysis
+except:
+    after_analysis = lambda i:None
+
 postid2post = {}
 username2post = {}
 replied = {}
@@ -123,7 +128,8 @@ def floor2url(floor): #输入楼层输出对应的url
     pid = floor2id(floor)
     return "[url=/forum.php?mod=viewthread&tid=1623494&page={pageid}#pid{pid}]{floor}[/url]".format(**locals())
 
-starttime = 1524974400
+starttime = int(time.mktime(time.strptime(data[1][5], "%Y-%m-%d %H:%M"))) #开始时间按沙发的发帖时间计算
+
 def trenddata(userposts):
     result = [[0,0]]
     tmp = 0
@@ -139,7 +145,7 @@ def trenddata(userposts):
     return result
 
 floor_handled = {}
-def print_quote_link(floor, t):
+def print_quote_link(floor, t, depth=-1):
     post = data[int(floor)-1]
     floor = str(floor)
     if floor_handled.get(floor, False) == True:
@@ -153,7 +159,10 @@ def print_quote_link(floor, t):
         result.append(post[1])
         floor_handled[post[1]] = True
     if len(result)>30:
-        print("第%d条链(长度%d)："%(t, len(result))+"\n".join([floor2url(i)+" "+"%-10s"%data[int(i)-1][2]+"\t"+data[int(i)-1][4].replace("\n","").replace("\r","") for i in result])+"\n----\n")
+        len_result = len(result)
+        if depth>0:
+            result = result[0:depth]
+        print("第%d条链(长度%d)："%(t, len_result)+"\n".join([floor2url(i)+" "+"%-10s"%data[int(i)-1][2]+"\t"+data[int(i)-1][4].replace("\n","").replace("\r","") for i in result])+"\n----\n")
         return True
     else:
         return False
@@ -164,7 +173,7 @@ if len(sys.argv)==1:
         print(hour+"点"+"\t"+str(count))
 
     print("\n[用户Top{config_top}]\n[table]".format(config_top=config_top))
-    print("[tr][td]"+"[/td][td]".join(["排名","用户名","回帖次数","爬楼率(引用的引用不是自己的比率)","提醒处理率(别人回复了我 我接着回复别人)","神游次数(不引用直接回复, 大于1则违规)","多次引用违规","回复平均字数","楼层"])+"[/td][/tr]")
+    print("[tr][td]"+"[/td][td]".join(["排名","用户名","回帖次数","爬楼率(引用的引用不是自己的比率)","提醒处理率(别人回复了我 我接着回复别人)","神游次数(不引用直接回复, 大于1则违规)","重复引用违规(同一层不能引用两次)","回复平均字数","楼层"])+"[/td][/tr]")
     sortbypostcount = sort_by_len(username2post)
     t = 1
     trendjson = []
@@ -213,24 +222,26 @@ if len(sys.argv)==1:
     #for username, count in sort_reverse(palou_count):
     #    print("%-10s"%username+"\t"+"%.1f%%"%(count*100))
 
-    print("\n[多次引用违规]\n[table][tr][td]用户名[/td][td]违规次数[/td][td]违规相应楼层[/td][/tr]")
+    print("\n[重复引用违规]\n[table][tr][td]用户名[/td][td]违规次数[/td][td]违规相应楼层[/td][/tr]")
     for username, count in sort_reverse(yinyong_weigui_count):
         print("[tr][td]"+"[/td][td]".join([username,str(count),",".join([floor2url(i) for i in yinyong_weigui[username]])])+"[/td][/tr]")
     print("[/table]")
 
     template = open("trend.template.html","r", encoding="utf-8").read()
     open("trend.html", "w", encoding="utf-8").write(
-        template.replace("{{trendjson}}",json.dumps(trendjson))\
+        template.replace("{{trendjson}}",json.dumps(trendjson).replace("'","\\'"))\
                 .replace("{{starttime}}",str(starttime))\
                 .replace("{{titletext}}","统计截至 "+maxfloor+" 楼 "+maxposttime)
     )
     
-    print("\n[最长引用链] 按完整链长度排序，但只显示每条链独有部分 长度大于30才列出")
+    print("\n[最长引用链] 按完整链长度排序，但只显示每条链最后一层楼")
     t = 1
     for floor, depth in sort_reverse(quote_depth):
-        if print_quote_link(floor, t):
+        if print_quote_link(floor, t, 1):
             t += 1
     print()
+    lastfloor = data[-1][1]
+    after_analysis(lastfloor)
 
 else:
     username = sys.argv[1]
@@ -251,7 +262,7 @@ else:
         print(floor2url(floor), end=",")
     print()
     
-    print("多次引用违规次数 %d 楼层："%yinyong_weigui_count.get(username,0))
+    print("重复引用违规次数 %d 楼层："%yinyong_weigui_count.get(username,0))
     print(",".join([floor2url(i) for i in yinyong_weigui.get(username,[])]))
 
 

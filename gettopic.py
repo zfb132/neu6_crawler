@@ -2,9 +2,14 @@
 # encoding: utf-8
 from login import NEU6
 import re
+import time
+def myprint(*args, **kwargs):
+    args = list(args)
+    args[0] = "["+time.strftime("%Y-%m-%d %H:%M:%S")+"] "+args[0]
+    print(*args, **kwargs)
 
 class NEU6_TOPIC(NEU6):
-    def thread_page(self, threadid, pageid, extraid=1, usecache=True):
+    def thread_page(self, threadid, pageid, extraid=1, usecache=True, only_pages=False):
         """
         获得一个页面，返回[标题, 页面总数, 帖子的数组]
         帖子[postid, floor, username, contenthtml, content, posttime, replytarget]
@@ -21,6 +26,9 @@ class NEU6_TOPIC(NEU6):
             pages = int(a.b.find("a", {"class":"last"})["href"].split("-")[-2])
         except:
             pages = int(pageid)
+        if only_pages:
+            return pages
+            
         postsdiv = a.b.find("div", {"id":"postlist"})
         posts = [] #数据结构[postid, floor, username, contenthtml, content, posttime, replytarget] 全部为str类型
         postids = re.findall(r"checkmgcmn\('post_(\d+)", html)
@@ -53,7 +61,7 @@ class NEU6_TOPIC(NEU6):
         return [title, pages, posts]
     
     def thread_pages(self, threadid):
-        return self.thread_page(threadid, pageid=1, extraid=1, usecache=False)[1]
+        return self.thread_page(threadid, pageid=1, extraid=1, usecache=False, only_pages=True)
 
 if __name__=="__main__":
     from config import username, password, threadid
@@ -67,35 +75,39 @@ if __name__=="__main__":
             posts = pickle.load(open(datafilename,"rb"))
         except:
             posts = []
-        if len(posts):
-            for i in range(1, int(posts[-1][1])+1):
+        i = 0
+        while i<1001:
+            if len(posts):
+                for i in range(1, int(posts[-1][1])+1):
+                    try:
+                        assert i==int(posts[i-1][1]) # 检查缓存正确性 如果遗漏了楼层退出
+                    except:
+                        print(i,post[i-1])
+                        exit()
+                lastfloor = int(posts[-1][1])
+                lastpage = lastfloor//10
+            else:
+                lastpage = 0
+            i = lastpage+1
+            pages = x.thread_pages(threadid) # 不使用缓存获取当前有多少页
+            usecache = False # 最后一页不使用缓存
+            while i<=pages:
+                title, _pages, page_posts = x.thread_page(threadid, i, usecache=usecache)
+                if _pages > pages:
+                    pages = _pages
+                usecache= True # 后续页面继续允许缓存
                 try:
-                    assert i==int(posts[i-1][1]) # 检查缓存正确性 如果遗漏了楼层退出
+                    if len(posts):
+                        assert int(posts[-1][1])+1 == int(page_posts[0][1])
                 except:
-                    print(i,post[i-1])
-                    exit()
-            lastfloor = int(posts[-1][1])
-            lastpage = lastfloor//10
-        else:
-            lastpage = 0
-        pages = x.thread_pages(threadid) # 不使用缓存获取当前有多少页
-        i = lastpage+1
-        usecache = False # 最后一页不使用缓存
-        while i<=pages:
-            title, _pages, page_posts = x.thread_page(threadid, i, usecache=usecache)
-            if _pages > pages:
-                pages = _pages
-            usecache= True # 后续页面继续允许缓存
-            try:
-                if len(posts):
+                    posts = posts[:int(page_posts[0][1])-1] # 删掉旧数据的最后几楼
                     assert int(posts[-1][1])+1 == int(page_posts[0][1])
-            except:
-                posts = posts[:int(page_posts[0][1])-1] # 删掉旧数据的最后几楼
-                assert int(posts[-1][1])+1 == int(page_posts[0][1])
-            posts.extend(page_posts)
-            if i%10==0:
-                open(datafilename,"wb").write(pickle.dumps(posts))
-            i += 1
-        open(datafilename,"wb").write(pickle.dumps(posts))
+                posts.extend(page_posts)
+                if i%10==0:
+                    open(datafilename,"wb").write(pickle.dumps(posts))
+                i += 1
+            open(datafilename,"wb").write(pickle.dumps(posts))
+            myprint("sleep a while...")
+            time.sleep(60) #休息60秒继续爬
     else:
         pass
